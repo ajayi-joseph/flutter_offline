@@ -84,6 +84,122 @@ class DemoPage extends StatelessWidget {
 
 For more info, please, refer to the `main.dart` in the example.
 
+## 🔄 Manual Retry Functionality
+
+The library now supports manual retry functionality with exponential backoff and retry limits, providing users with a simple retry button for connectivity checks.
+
+### Basic Usage with Retry
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_offline/flutter_offline.dart';
+
+class DemoPageWithRetry extends StatefulWidget {
+  @override
+  _DemoPageWithRetryState createState() => _DemoPageWithRetryState();
+}
+
+class _DemoPageWithRetryState extends State<DemoPageWithRetry> {
+  OfflineBuilderState? _offlineBuilderState;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Offline Demo with Retry")),
+      body: OfflineBuilder(
+        maxRetries: 5,
+        retryCooldown: Duration(seconds: 2),
+        onRetry: () async {
+          // Custom retry logic
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Retrying connectivity check...')),
+          );
+        },
+        onBuilderReady: (state) {
+          _offlineBuilderState = state;
+        },
+        connectivityBuilder: (context, connectivity, child) {
+          final bool connected = !connectivity.contains(ConnectivityResult.none);
+          return Column(
+            children: [
+              Container(
+                height: 50,
+                color: connected ? Colors.green : Colors.red,
+                child: Center(
+                  child: Text(connected ? 'ONLINE' : 'OFFLINE'),
+                ),
+              ),
+              Expanded(child: child),
+              if (!connected) ...[
+                ElevatedButton.icon(
+                  onPressed: _offlineBuilderState?.canRetry == true
+                      ? () async {
+                          await _offlineBuilderState?.retry();
+                          setState(() {});
+                        }
+                      : null,
+                  icon: _offlineBuilderState?.isRetrying == true
+                      ? CircularProgressIndicator()
+                      : Icon(Icons.refresh),
+                  label: Text(_offlineBuilderState?.isRetrying == true ? 'Retrying...' : 'Retry Connection'),
+                ),
+                Text('Attempts: ${_offlineBuilderState?.retryCount ?? 0}/5'),
+              ],
+            ],
+          );
+        },
+        child: Center(child: Text('Your app content here')),
+      ),
+    );
+  }
+}
+```
+
+### Retry Configuration Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `maxRetries` | `int` | `5` | Maximum number of retry attempts |
+| `retryCooldown` | `Duration` | `2 seconds` | Minimum time between manual retries |
+| `onRetry` | `RetryCallback?` | `null` | Custom callback executed on retry |
+| `onBuilderReady` | `Function?` | `null` | Callback to access OfflineBuilderState |
+
+### Retry State Properties
+
+Access these through the `OfflineBuilderState` instance:
+
+| Property | Description |
+|----------|-------------|
+| `retry()` | Manually trigger a connectivity retry |
+| `canRetry` | Check if retry is currently available |
+| `isRetrying` | Check if a retry is in progress |
+| `retryCount` | Current number of retry attempts |
+
+### Features
+
+- **Exponential Backoff**: Retry delays increase exponentially (1s, 2s, 4s, 8s, 16s)
+- **Retry Limits**: Configurable maximum retry attempts
+- **Cooldown Protection**: Prevents spam retries
+- **Custom Callbacks**: Execute custom logic on retry
+- **State Access**: Direct access to retry state for UI updates
+- **Automatic Reset**: Retry counter resets when connection is restored
+
+## 🧪 Testing
+
+The library includes comprehensive tests covering:
+
+- Core connectivity monitoring functionality  
+- Retry functionality integration tests
+- Debounce and utility function tests
+- Error handling and edge cases
+
+All tests are located in the `test/` directory and follow Flutter's testing conventions.
+
+Run tests with:
+```bash
+flutter test
+```
+
 ## 📷 Screenshots
 
 <table>

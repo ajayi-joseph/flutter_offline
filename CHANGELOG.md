@@ -1,3 +1,13 @@
+## [6.1.0]
+
+Added manual retry functionality with exponential backoff:
+- Simple callback-based retry functionality via `onBuilderReady`
+- Configurable retry limits and cooldown periods
+- Exponential backoff retry strategy (1s, 2s, 4s, 8s, 16s...)
+- Custom retry callbacks support (`onRetry`)
+- Automatic retry counter reset when connection is restored
+- Enhanced demo with retry button example
+
 ## [6.0.0]
 
 Bump `package:connectivity_plus` to `^7.0.0`
