@@ -10,7 +10,8 @@ class Demo1 extends StatefulWidget {
 }
 
 class _Demo1State extends State<Demo1> {
-  OfflineBuilderState? _offlineBuilderState;
+  final GlobalKey<OfflineBuilderState> _offlineKey =
+      GlobalKey<OfflineBuilderState>();
   bool _isConnected = true; // Track connection state
   Timer? _cooldownTimer;
 
@@ -32,6 +33,7 @@ class _Demo1State extends State<Demo1> {
   @override
   Widget build(BuildContext context) {
     return OfflineBuilder(
+      key: _offlineKey,
       maxRetries: 5,
       retryCooldown: const Duration(seconds: 2),
       onRetry: () async {
@@ -42,9 +44,6 @@ class _Demo1State extends State<Demo1> {
             duration: Duration(seconds: 2),
           ),
         );
-      },
-      onBuilderReady: (state) {
-        _offlineBuilderState = state;
       },
       connectivityBuilder: (
         BuildContext context,
@@ -71,7 +70,9 @@ class _Demo1State extends State<Demo1> {
               right: 0.0,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 350),
-                color: connected ? const Color(0xFF00EE44) : const Color(0xFFEE4400),
+                color: connected
+                    ? const Color(0xFF00EE44)
+                    : const Color(0xFFEE4400),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
                   child: connected
@@ -81,7 +82,8 @@ class _Demo1State extends State<Demo1> {
                           children: <Widget>[
                             const Text('OFFLINE'),
                             const SizedBox(width: 8.0),
-                            if (_offlineBuilderState?.isRetrying == true) ...[
+                            if (_offlineKey.currentState?.isRetrying ==
+                                true) ...[
                               const SizedBox(width: 8.0),
                               const Text('RETRYING...'),
                             ] else ...[
@@ -90,7 +92,8 @@ class _Demo1State extends State<Demo1> {
                                 height: 12.0,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.0,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               ),
                             ],
@@ -119,42 +122,45 @@ class _Demo1State extends State<Demo1> {
           Column(
             children: [
               ElevatedButton.icon(
-                onPressed:
-                    !_isConnected && _offlineBuilderState?.canRetry == true && _offlineBuilderState?.isRetrying == false
-                        ? () async {
-                            setState(() {}); // Force UI refresh before retry
-                            await _offlineBuilderState?.retry();
-                            _startCooldownTimer(); // Start timer to refresh UI
-                            setState(() {}); // Refresh UI after retry
-                          }
-                        : null,
-                icon: _offlineBuilderState?.isRetrying == true
+                onPressed: !_isConnected &&
+                        _offlineKey.currentState?.canRetry == true &&
+                        _offlineKey.currentState?.isRetrying == false
+                    ? () async {
+                        setState(() {}); // Force UI refresh before retry
+                        await _offlineKey.currentState?.retry();
+                        _startCooldownTimer(); // Start timer to refresh UI
+                        setState(() {}); // Refresh UI after retry
+                      }
+                    : null,
+                icon: _offlineKey.currentState?.isRetrying == true
                     ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh),
-                label: Text(_offlineBuilderState?.isRetrying == true ? 'Retrying...' : 'Retry Connection'),
+                label: Text(_offlineKey.currentState?.isRetrying == true
+                    ? 'Retrying...'
+                    : 'Retry Connection'),
               ),
               const SizedBox(height: 8),
               Text(
-                'Retry attempts: ${_offlineBuilderState?.retryCount ?? 0}/5',
+                'Retry attempts: ${_offlineKey.currentState?.retryCount ?? 0}/5',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 4),
               if (!_isConnected) ...[
-                if (_offlineBuilderState?.isRetrying == true)
+                if (_offlineKey.currentState?.isRetrying == true)
                   Text(
-                    'Retrying (delay: ${1 << (_offlineBuilderState?.retryCount ?? 0)}s)...',
+                    'Retrying (delay: ${1 << (_offlineKey.currentState?.retryCount ?? 0)}s)...',
                     style: const TextStyle(fontSize: 12, color: Colors.blue),
                   )
-                else if (_offlineBuilderState?.retryCount == 5)
+                else if (_offlineKey.currentState?.retryCount == 5)
                   const Text(
                     'Max retries reached (5/5)',
                     style: TextStyle(fontSize: 12, color: Colors.red),
                   )
-                else if (_offlineBuilderState?.canRetry == false)
+                else if (_offlineKey.currentState?.canRetry == false)
                   const Text(
                     'Cooldown active (wait before next retry)',
                     style: TextStyle(fontSize: 12, color: Colors.orange),
