@@ -53,7 +53,9 @@ void main() {
         values.add([ConnectivityResult.wifi]);
         await values.close();
         await waitForTimer(5);
-        expect(emittedValues, [[ConnectivityResult.mobile]]);
+        expect(emittedValues, [
+          [ConnectivityResult.mobile]
+        ]);
       });
 
       test('outputs multiple values spaced further than duration', () async {
@@ -63,7 +65,10 @@ void main() {
         await waitForTimer(5);
         expect(
           emittedValues,
-          [[ConnectivityResult.mobile], [ConnectivityResult.wifi]],
+          [
+            [ConnectivityResult.mobile],
+            [ConnectivityResult.wifi]
+          ],
         );
       });
 

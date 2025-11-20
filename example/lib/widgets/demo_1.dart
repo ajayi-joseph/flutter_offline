@@ -71,9 +71,7 @@ class _Demo1State extends State<Demo1> {
               right: 0.0,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 350),
-                color: connected
-                    ? const Color(0xFF00EE44)
-                    : const Color(0xFFEE4400),
+                color: connected ? const Color(0xFF00EE44) : const Color(0xFFEE4400),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
                   child: connected
@@ -92,8 +90,7 @@ class _Demo1State extends State<Demo1> {
                                 height: 12.0,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.0,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               ),
                             ],
@@ -122,16 +119,15 @@ class _Demo1State extends State<Demo1> {
           Column(
             children: [
               ElevatedButton.icon(
-                onPressed: !_isConnected &&
-                        _offlineBuilderState?.canRetry == true &&
-                        _offlineBuilderState?.isRetrying == false
-                    ? () async {
-                        setState(() {}); // Force UI refresh before retry
-                        await _offlineBuilderState?.retry();
-                        _startCooldownTimer(); // Start timer to refresh UI
-                        setState(() {}); // Refresh UI after retry
-                      }
-                    : null,
+                onPressed:
+                    !_isConnected && _offlineBuilderState?.canRetry == true && _offlineBuilderState?.isRetrying == false
+                        ? () async {
+                            setState(() {}); // Force UI refresh before retry
+                            await _offlineBuilderState?.retry();
+                            _startCooldownTimer(); // Start timer to refresh UI
+                            setState(() {}); // Refresh UI after retry
+                          }
+                        : null,
                 icon: _offlineBuilderState?.isRetrying == true
                     ? const SizedBox(
                         width: 16,
@@ -139,9 +135,7 @@ class _Demo1State extends State<Demo1> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.refresh),
-                label: Text(_offlineBuilderState?.isRetrying == true
-                    ? 'Retrying...'
-                    : 'Retry Connection'),
+                label: Text(_offlineBuilderState?.isRetrying == true ? 'Retrying...' : 'Retry Connection'),
               ),
               const SizedBox(height: 8),
               Text(
