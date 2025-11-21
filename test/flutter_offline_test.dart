@@ -556,6 +556,24 @@ void main() {
         expect(retryController.canRetry, true);
       });
     });
+
+    testWidgets('Test base controller empty callbacks', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final controller = OfflineRetryController(
+          maxRetries: 1,
+          retryCooldown: Duration.zero,
+        );
+
+        // Call base onRetry (should do nothing)
+        await controller.onRetry();
+
+        // Call base onRetryError (should do nothing - this covers line 101)
+        controller.onRetryError(Exception('test'), StackTrace.current);
+
+        // Verify no issues calling empty base implementations
+        expect(controller.retryCount, 0);
+      });
+    });
   });
 }
 
