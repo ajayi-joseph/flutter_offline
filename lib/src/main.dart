@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_offline/src/utils.dart';
 import 'package:network_info_plus/network_info_plus.dart';
@@ -124,26 +123,38 @@ class OfflineBuilderState extends State<OfflineBuilder> {
                 .connectivityService.onConnectivityChanged
                 .transform(startsWith(data)))
             .transform(debounce(widget.debounceDuration))
-            .map((connectivity) {
-      // Reset retry counter when connection is restored
-      final isConnected = !connectivity.contains(ConnectivityResult.none);
-      if (isConnected && _retryCount > 0) {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {
-              _retryCount = 0;
-              _lastRetryTime = null;
-            });
-          }
+            .transform(_resetRetryOnReconnect());
+  }
+
+  /// Reset retry state when connection is restored
+  StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>
+      _resetRetryOnReconnect() {
+    return StreamTransformer.fromHandlers(
+      handleData: (connectivity, sink) {
+        _handleConnectivityChange(connectivity);
+        sink.add(connectivity);
+      },
+    );
+  }
+
+  /// Handle connectivity changes and reset retry state when reconnected
+  void _handleConnectivityChange(List<ConnectivityResult> connectivity) {
+    final isConnected = !connectivity.contains(ConnectivityResult.none);
+    if (isConnected && _retryCount > 0) {
+      if (mounted) {
+        setState(() {
+          _retryCount = 0;
+          _lastRetryTime = null;
         });
       }
-      return connectivity;
-    });
+    }
   }
 
   /// Manually retry connectivity check with exponential backoff
   Future<void> retry() async {
-    if (!_canRetryNow()) return;
+    if (!_canRetryNow()) {
+      return;
+    }
 
     setState(() {
       _isRetrying = true;
@@ -191,8 +202,12 @@ class OfflineBuilderState extends State<OfflineBuilder> {
 
   /// Internal helper to check if retry is available
   bool _canRetryNow() {
-    if (_isRetrying) return false;
-    if (_retryCount >= widget.maxRetries) return false;
+    if (_isRetrying) {
+      return false;
+    }
+    if (_retryCount >= widget.maxRetries) {
+      return false;
+    }
 
     final now = clock.now();
     if (_lastRetryTime != null &&
