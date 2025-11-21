@@ -84,116 +84,84 @@ class DemoPage extends StatelessWidget {
 
 For more info, please, refer to the `main.dart` in the example.
 
-## 🔄 Manual Retry Functionality
+## 🔄 Retry Functionality
 
-The library now supports manual retry functionality with exponential backoff and retry limits, providing users with a simple retry button for connectivity checks.
-
-### Basic Usage with Retry
+Manually retry connectivity checks with exponential backoff:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_offline/flutter_offline.dart';
-
-class DemoPageWithRetry extends StatefulWidget {
+class MyWidget extends StatefulWidget {
   @override
-  _DemoPageWithRetryState createState() => _DemoPageWithRetryState();
+  State<MyWidget> createState() => _MyWidgetState();
 }
 
-class _DemoPageWithRetryState extends State<DemoPageWithRetry> {
-  OfflineBuilderState? _offlineBuilderState;
+class _MyWidgetState extends State<MyWidget> {
+  late final OfflineRetryController _retryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _retryController = OfflineRetryController(
+      maxRetries: 5,
+      retryCooldown: const Duration(seconds: 2),
+    );
+    _retryController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _retryController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Offline Demo with Retry")),
-      body: OfflineBuilder(
-        maxRetries: 5,
-        retryCooldown: Duration(seconds: 2),
-        onRetry: () async {
-          // Custom retry logic
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Retrying connectivity check...')),
-          );
-        },
-        onBuilderReady: (state) {
-          _offlineBuilderState = state;
-        },
-        connectivityBuilder: (context, connectivity, child) {
-          final bool connected = !connectivity.contains(ConnectivityResult.none);
-          return Column(
-            children: [
-              Container(
-                height: 50,
-                color: connected ? Colors.green : Colors.red,
-                child: Center(
-                  child: Text(connected ? 'ONLINE' : 'OFFLINE'),
-                ),
+    return OfflineBuilder(
+      retryController: _retryController,
+      connectivityBuilder: (context, connectivity, child) {
+        final connected = !connectivity.contains(ConnectivityResult.none);
+        return Column(
+          children: [
+            Text(connected ? 'ONLINE' : 'OFFLINE'),
+            if (!connected)
+              ElevatedButton(
+                onPressed: _retryController.canRetry ? _retryController.retry : null,
+                child: Text('Retry (${_retryController.retryCount}/5)'),
               ),
-              Expanded(child: child),
-              if (!connected) ...[
-                ElevatedButton.icon(
-                  onPressed: _offlineBuilderState?.canRetry == true
-                      ? () async {
-                          await _offlineBuilderState?.retry();
-                          setState(() {});
-                        }
-                      : null,
-                  icon: _offlineBuilderState?.isRetrying == true
-                      ? CircularProgressIndicator()
-                      : Icon(Icons.refresh),
-                  label: Text(_offlineBuilderState?.isRetrying == true ? 'Retrying...' : 'Retry Connection'),
-                ),
-                Text('Attempts: ${_offlineBuilderState?.retryCount ?? 0}/5'),
-              ],
-            ],
-          );
-        },
-        child: Center(child: Text('Your app content here')),
-      ),
+          ],
+        );
+      },
     );
   }
 }
 ```
 
-### Retry Configuration Options
+### Custom Retry Logic
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `maxRetries` | `int` | `5` | Maximum number of retry attempts |
-| `retryCooldown` | `Duration` | `2 seconds` | Minimum time between manual retries |
-| `onRetry` | `RetryCallback?` | `null` | Custom callback executed on retry |
-| `onBuilderReady` | `Function?` | `null` | Callback to access OfflineBuilderState |
+Override `onRetry()` or `onRetryError()` for custom behavior:
 
-### Retry State Properties
+```dart
+class CustomRetryController extends OfflineRetryController {
+  CustomRetryController() : super(maxRetries: 3);
 
-Access these through the `OfflineBuilderState` instance:
+  @override
+  Future<void> onRetry() async {
+    print('Retrying connection...');
+  }
 
-| Property | Description |
-|----------|-------------|
-| `retry()` | Manually trigger a connectivity retry |
-| `canRetry` | Check if retry is currently available |
-| `isRetrying` | Check if a retry is in progress |
-| `retryCount` | Current number of retry attempts |
+  @override
+  void onRetryError(Object error, StackTrace stackTrace) {
+    print('Retry failed: $error');
+  }
+}
+```
 
-### Features
-
-- **Exponential Backoff**: Retry delays increase exponentially (1s, 2s, 4s, 8s, 16s)
-- **Retry Limits**: Configurable maximum retry attempts
-- **Cooldown Protection**: Prevents spam retries
-- **Custom Callbacks**: Execute custom logic on retry
-- **State Access**: Direct access to retry state for UI updates
-- **Automatic Reset**: Retry counter resets when connection is restored
+**Features:**
+- Exponential backoff (1s, 2s, 4s, 8s, 16s)
+- Configurable retry limits and cooldown
+- Auto-reset on reconnection
+- Extends `ChangeNotifier` for reactive UI updates
 
 ## 🧪 Testing
-
-The library includes comprehensive tests covering:
-
-- Core connectivity monitoring functionality  
-- Retry functionality integration tests
-- Debounce and utility function tests
-- Error handling and edge cases
-
-All tests are located in the `test/` directory and follow Flutter's testing conventions.
 
 Run tests with:
 ```bash
