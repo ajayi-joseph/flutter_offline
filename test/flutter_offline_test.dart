@@ -488,6 +488,74 @@ void main() {
       expect(controller.maxRetries, equals(kDefaultMaxRetries));
       expect(controller.retryCooldown, equals(kDefaultRetryCooldown));
     });
+
+    testWidgets('Test retry reset on reconnection', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final service = TestConnectivityService([ConnectivityResult.none]);
+        final retryController = OfflineRetryController(
+          maxRetries: 5,
+          retryCooldown: Duration.zero,
+        );
+
+        // Listen to controller to trigger state updates
+        var resetCalled = false;
+        retryController.addListener(() {
+          if (retryController.retryCount == 0) {
+            resetCalled = true;
+          }
+        });
+
+        await tester.pumpWidget(MaterialApp(
+          home: OfflineBuilder.initialize(
+            connectivityService: service,
+            wifiInfo: TestNetworkInfoService(),
+            debounceDuration: Duration.zero,
+            retryController: retryController,
+            connectivityBuilder: (_, connectivity, Widget child) {
+              // Test the reset logic is triggered
+              return Text(connectivity.toString());
+            },
+            child: const Text('test'),
+          ),
+        ));
+
+        await tester.pump();
+
+        // Perform a retry
+        await retryController.retry();
+        expect(retryController.retryCount, 1);
+
+        // Simulate reconnection
+        service.result = [ConnectivityResult.wifi];
+        await tester.pump();
+        await Future.delayed(Duration.zero); // Let the stream process
+
+        // Verify retry state was reset
+        expect(retryController.retryCount, 0);
+        expect(resetCalled, true);
+      });
+    });
+
+    testWidgets('Test manual reset', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final retryController = OfflineRetryController(
+          maxRetries: 5,
+          retryCooldown: Duration.zero,
+        );
+
+        // Perform retries
+        await retryController.retry();
+        await retryController.retry();
+        expect(retryController.retryCount, 2);
+
+        // Manual reset
+        retryController.reset();
+
+        // Verify state was reset
+        expect(retryController.retryCount, 0);
+        expect(retryController.canRetry, true);
+      });
+    });
   });
 }
 
