@@ -96,9 +96,7 @@ class _Demo1State extends State<Demo1> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.refresh),
-                      label: Text(_retryController.isRetrying
-                          ? 'Retrying...'
-                          : 'Retry Connection'),
+                      label: Text(_retryController.isRetrying ? 'Retrying...' : 'Retry Connection'),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -110,8 +108,7 @@ class _Demo1State extends State<Demo1> {
                       if (_retryController.isRetrying)
                         Text(
                           'Retrying with ${1 << _retryController.retryCount}s exponential backoff...',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.blue),
+                          style: const TextStyle(fontSize: 12, color: Colors.blue),
                         )
                       else if (_retryController.retryCount == 5)
                         const Text(
@@ -141,9 +138,7 @@ class _Demo1State extends State<Demo1> {
               right: 0.0,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 350),
-                color: connected
-                    ? const Color(0xFF00EE44)
-                    : const Color(0xFFEE4400),
+                color: connected ? const Color(0xFF00EE44) : const Color(0xFFEE4400),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
                   child: connected
@@ -162,8 +157,7 @@ class _Demo1State extends State<Demo1> {
                                 height: 12.0,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.0,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               ),
                             ],
