@@ -10,8 +10,7 @@ const kOfflineDebounceDuration = Duration(seconds: 3);
 const kDefaultMaxRetries = 5;
 const kDefaultRetryCooldown = Duration(seconds: 2);
 
-typedef ValueWidgetBuilder<T> = Widget Function(
-    BuildContext context, T value, Widget child);
+typedef ValueWidgetBuilder<T> = Widget Function(BuildContext context, T value, Widget child);
 
 /// Controller for managing retry functionality and state
 class OfflineRetryController extends ChangeNotifier {
@@ -86,8 +85,7 @@ class OfflineRetryController extends ChangeNotifier {
     }
 
     final now = clock.now();
-    if (_lastRetryTime != null &&
-        now.difference(_lastRetryTime!) < retryCooldown) {
+    if (_lastRetryTime != null && now.difference(_lastRetryTime!) < retryCooldown) {
       return false;
     }
 
@@ -139,9 +137,7 @@ class OfflineBuilder extends StatefulWidget {
     this.child,
     this.errorBuilder,
     this.retryController,
-  })  : assert(
-            !(builder is WidgetBuilder && child is Widget) &&
-                !(builder == null && child == null),
+  })  : assert(!(builder is WidgetBuilder && child is Widget) && !(builder == null && child == null),
             'You should specify either a builder or a child'),
         super(key: key);
 
@@ -179,18 +175,14 @@ class OfflineBuilderState extends State<OfflineBuilder> {
   void initState() {
     super.initState();
 
-    _connectivityStream =
-        Stream.fromFuture(widget.connectivityService.checkConnectivity())
-            .asyncExpand((data) => widget
-                .connectivityService.onConnectivityChanged
-                .transform(startsWith(data)))
-            .transform(debounce(widget.debounceDuration))
-            .transform(_resetRetryOnReconnect());
+    _connectivityStream = Stream.fromFuture(widget.connectivityService.checkConnectivity())
+        .asyncExpand((data) => widget.connectivityService.onConnectivityChanged.transform(startsWith(data)))
+        .transform(debounce(widget.debounceDuration))
+        .transform(_resetRetryOnReconnect());
   }
 
   /// Reset retry state when connection is restored
-  StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>
-      _resetRetryOnReconnect() {
+  StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>> _resetRetryOnReconnect() {
     return StreamTransformer.fromHandlers(
       handleData: (connectivity, sink) {
         _handleConnectivityChange(connectivity);
@@ -211,8 +203,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
   Widget build(BuildContext context) {
     return StreamBuilder<List<ConnectivityResult>>(
       stream: _connectivityStream,
-      builder: (BuildContext context,
-          AsyncSnapshot<List<ConnectivityResult>> snapshot) {
+      builder: (BuildContext context, AsyncSnapshot<List<ConnectivityResult>> snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
           return const SizedBox();
         }
@@ -224,8 +215,7 @@ class OfflineBuilderState extends State<OfflineBuilder> {
           throw OfflineBuilderError(snapshot.error!);
         }
 
-        return widget.connectivityBuilder(
-            context, snapshot.data!, widget.child ?? widget.builder!(context));
+        return widget.connectivityBuilder(context, snapshot.data!, widget.child ?? widget.builder!(context));
       },
     );
   }

@@ -16,8 +16,7 @@ class _TestRetryController extends OfflineRetryController {
   });
 
   final Future<void> Function()? onRetryCallback;
-  final void Function(Object error, StackTrace stackTrace)?
-      onRetryErrorCallback;
+  final void Function(Object error, StackTrace stackTrace)? onRetryErrorCallback;
 
   @override
   Future<void> onRetry() async {
@@ -48,8 +47,7 @@ void main() {
     testWidgets('Test w/ builder param', (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(
         home: OfflineBuilder.initialize(
-          connectivityService:
-              TestConnectivityService([ConnectivityResult.none]),
+          connectivityService: TestConnectivityService([ConnectivityResult.none]),
           wifiInfo: TestNetworkInfoService(),
           connectivityBuilder: (_, __, Widget child) => child,
           builder: (BuildContext context) => const Text('builder_result'),
@@ -62,8 +60,7 @@ void main() {
     testWidgets('Test w/ child param', (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(
         home: OfflineBuilder.initialize(
-          connectivityService:
-              TestConnectivityService([ConnectivityResult.none]),
+          connectivityService: TestConnectivityService([ConnectivityResult.none]),
           wifiInfo: TestNetworkInfoService(),
           connectivityBuilder: (_, __, Widget child) => child,
           child: const Text('child_result'),
@@ -78,8 +75,7 @@ void main() {
     testWidgets('Test builder & child param', (WidgetTester tester) async {
       expect(() {
         OfflineBuilder.initialize(
-          connectivityService:
-              TestConnectivityService([ConnectivityResult.none]),
+          connectivityService: TestConnectivityService([ConnectivityResult.none]),
           wifiInfo: TestNetworkInfoService(),
           connectivityBuilder: (_, __, Widget child) => child,
           builder: (BuildContext context) => const Text('builder_result'),
@@ -91,8 +87,7 @@ void main() {
     testWidgets('Test no builder & child param', (WidgetTester tester) async {
       expect(() {
         OfflineBuilder.initialize(
-          connectivityService:
-              TestConnectivityService([ConnectivityResult.none]),
+          connectivityService: TestConnectivityService([ConnectivityResult.none]),
           wifiInfo: TestNetworkInfoService(),
           connectivityBuilder: (_, __, Widget child) => child,
         );
@@ -107,8 +102,7 @@ void main() {
         home: OfflineBuilder.initialize(
           connectivityService: TestConnectivityService(initialConnection),
           wifiInfo: TestNetworkInfoService(),
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           child: const SizedBox(),
         ),
       ));
@@ -122,8 +116,7 @@ void main() {
         home: OfflineBuilder.initialize(
           connectivityService: TestConnectivityService(initialConnection),
           wifiInfo: TestNetworkInfoService(),
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           child: const SizedBox(),
         ),
       ));
@@ -133,8 +126,7 @@ void main() {
   });
 
   group('Test Flipper', () {
-    testWidgets('Test builder flips online to offline',
-        (WidgetTester tester) async {
+    testWidgets('Test builder flips online to offline', (WidgetTester tester) async {
       const initialConnection = [ConnectivityResult.wifi];
       const lastConnection = [ConnectivityResult.none];
       final service = TestConnectivityService(initialConnection);
@@ -142,8 +134,7 @@ void main() {
         home: OfflineBuilder.initialize(
           connectivityService: service,
           wifiInfo: TestNetworkInfoService(),
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           child: const SizedBox(),
         ),
       ));
@@ -156,8 +147,7 @@ void main() {
       expect(find.text(lastConnection.toString()), findsOneWidget);
     });
 
-    testWidgets('Test builder flips offline to online',
-        (WidgetTester tester) async {
+    testWidgets('Test builder flips offline to online', (WidgetTester tester) async {
       const initialConnection = [ConnectivityResult.none];
       const lastConnection = [ConnectivityResult.wifi];
       final service = TestConnectivityService(initialConnection);
@@ -165,8 +155,7 @@ void main() {
         home: OfflineBuilder.initialize(
           connectivityService: service,
           wifiInfo: TestNetworkInfoService(),
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           child: const SizedBox(),
         ),
       ));
@@ -196,8 +185,7 @@ void main() {
           connectivityService: service,
           wifiInfo: TestNetworkInfoService(),
           debounceDuration: debounceDuration,
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           child: const SizedBox(),
         ),
       ));
@@ -262,8 +250,7 @@ void main() {
         home: OfflineBuilder.initialize(
           connectivityService: service,
           wifiInfo: TestNetworkInfoService(),
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           debounceDuration: Duration.zero,
           child: const SizedBox(),
         ),
@@ -285,8 +272,7 @@ void main() {
         home: OfflineBuilder.initialize(
           connectivityService: service,
           wifiInfo: TestNetworkInfoService(),
-          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) =>
-              Text('$connectivity'),
+          connectivityBuilder: (_, List<ConnectivityResult> connectivity, __) => Text('$connectivity'),
           debounceDuration: Duration.zero,
           errorBuilder: (context) => const Text('Error'),
           child: const SizedBox(),
@@ -303,8 +289,7 @@ void main() {
   });
 
   group('Test Retry Functionality', () {
-    testWidgets('Test retry parameters acceptance',
-        (WidgetTester tester) async {
+    testWidgets('Test retry parameters acceptance', (WidgetTester tester) async {
       final controller = OfflineRetryController(
         maxRetries: 3,
         retryCooldown: const Duration(seconds: 1),
@@ -314,8 +299,7 @@ void main() {
       expect(controller.retryCooldown, equals(const Duration(seconds: 1)));
     });
 
-    testWidgets('Test retry functionality with GlobalKey',
-        (WidgetTester tester) async {
+    testWidgets('Test retry functionality with GlobalKey', (WidgetTester tester) async {
       final offlineKey = GlobalKey<OfflineBuilderState>();
       final retryController = OfflineRetryController(
         maxRetries: 2,
@@ -325,8 +309,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(
         home: OfflineBuilder.initialize(
           key: offlineKey,
-          connectivityService:
-              TestConnectivityService([ConnectivityResult.none]),
+          connectivityService: TestConnectivityService([ConnectivityResult.none]),
           wifiInfo: TestNetworkInfoService(),
           retryController: retryController,
           connectivityBuilder: (_, __, Widget child) => child,
@@ -343,8 +326,7 @@ void main() {
       expect(retryController.retryCount, 0);
     });
 
-    testWidgets('Test retry with RetryController callback',
-        (WidgetTester tester) async {
+    testWidgets('Test retry with RetryController callback', (WidgetTester tester) async {
       await tester.runAsync(() async {
         final offlineKey = GlobalKey<OfflineBuilderState>();
         var onRetryCallCount = 0;
@@ -359,8 +341,7 @@ void main() {
         await tester.pumpWidget(MaterialApp(
           home: OfflineBuilder.initialize(
             key: offlineKey,
-            connectivityService:
-                TestConnectivityService([ConnectivityResult.none]),
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
             wifiInfo: TestNetworkInfoService(),
             retryController: retryController,
             connectivityBuilder: (_, __, Widget child) => child,
@@ -391,8 +372,7 @@ void main() {
         await tester.pumpWidget(MaterialApp(
           home: OfflineBuilder.initialize(
             key: offlineKey,
-            connectivityService:
-                TestConnectivityService([ConnectivityResult.none]),
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
             wifiInfo: TestNetworkInfoService(),
             retryController: retryController,
             connectivityBuilder: (_, __, Widget child) => child,
@@ -422,8 +402,7 @@ void main() {
       });
     });
 
-    testWidgets('Test retry counter after multiple retries',
-        (WidgetTester tester) async {
+    testWidgets('Test retry counter after multiple retries', (WidgetTester tester) async {
       await tester.runAsync(() async {
         final offlineKey = GlobalKey<OfflineBuilderState>();
         final retryController = OfflineRetryController(
@@ -434,8 +413,7 @@ void main() {
         await tester.pumpWidget(MaterialApp(
           home: OfflineBuilder.initialize(
             key: offlineKey,
-            connectivityService:
-                TestConnectivityService([ConnectivityResult.none]),
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
             wifiInfo: TestNetworkInfoService(),
             retryController: retryController,
             connectivityBuilder: (_, __, Widget child) => child,
@@ -462,8 +440,7 @@ void main() {
       });
     });
 
-    testWidgets('Test retry with onRetryError callback',
-        (WidgetTester tester) async {
+    testWidgets('Test retry with onRetryError callback', (WidgetTester tester) async {
       await tester.runAsync(() async {
         final offlineKey = GlobalKey<OfflineBuilderState>();
         Object? capturedError;
@@ -485,8 +462,7 @@ void main() {
         await tester.pumpWidget(MaterialApp(
           home: OfflineBuilder.initialize(
             key: offlineKey,
-            connectivityService:
-                TestConnectivityService([ConnectivityResult.none]),
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
             wifiInfo: TestNetworkInfoService(),
             retryController: retryController,
             connectivityBuilder: (_, __, Widget child) => child,
@@ -516,8 +492,7 @@ void main() {
 }
 
 class TestConnectivityService implements Connectivity {
-  TestConnectivityService([this.initialConnection])
-      : _result = initialConnection ?? [ConnectivityResult.none] {
+  TestConnectivityService([this.initialConnection]) : _result = initialConnection ?? [ConnectivityResult.none] {
     controller = StreamController<List<ConnectivityResult>>.broadcast(
       onListen: () => controller.add(_result),
     );
@@ -536,8 +511,7 @@ class TestConnectivityService implements Connectivity {
   void addError() => controller.addError('Error');
 
   @override
-  Stream<List<ConnectivityResult>> get onConnectivityChanged =>
-      controller.stream;
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => controller.stream;
 
   @override
   Future<List<ConnectivityResult>> checkConnectivity() {
@@ -580,8 +554,7 @@ class ErrorThrowingConnectivityService implements Connectivity {
   int checkCount = 0;
 
   @override
-  Stream<List<ConnectivityResult>> get onConnectivityChanged =>
-      controller.stream;
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => controller.stream;
 
   @override
   Future<List<ConnectivityResult>> checkConnectivity() async {
