@@ -12,7 +12,8 @@ Future<void> waitForTimer(int milliseconds) => Future<void>(() {
     );
 
 void main() {
-  StreamController<List<ConnectivityResult>> stream() => StreamController<List<ConnectivityResult>>.broadcast();
+  StreamController<List<ConnectivityResult>> stream() =>
+      StreamController<List<ConnectivityResult>>.broadcast();
 
   group('Group', () {
     late StreamController<List<ConnectivityResult>> values;
@@ -32,8 +33,10 @@ void main() {
       emittedValues = <List<ConnectivityResult>>[];
       errors = <List<ConnectivityResult>>[];
       isDone = false;
-      transformed = values.stream.transform<void>(transformer as StreamTransformer<List<ConnectivityResult>, void>);
-      subscription = transformed.listen(emittedValues.add, onError: errors.add, onDone: () {
+      transformed = values.stream.transform<void>(
+          transformer as StreamTransformer<List<ConnectivityResult>, void>);
+      subscription = transformed.listen(emittedValues.add, onError: errors.add,
+          onDone: () {
         isDone = true;
       });
     }

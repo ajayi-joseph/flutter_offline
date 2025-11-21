@@ -8,8 +8,10 @@ StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>> debounce(
   var seenFirstData = false;
   Timer? debounceTimer;
 
-  return StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>.fromHandlers(
-    handleData: (List<ConnectivityResult> data, EventSink<List<ConnectivityResult>> sink) {
+  return StreamTransformer<List<ConnectivityResult>,
+      List<ConnectivityResult>>.fromHandlers(
+    handleData: (List<ConnectivityResult> data,
+        EventSink<List<ConnectivityResult>> sink) {
       if (seenFirstData) {
         debounceTimer?.cancel();
         debounceTimer = Timer(debounceDuration, () => sink.add(data));
@@ -25,7 +27,8 @@ StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>> debounce(
   );
 }
 
-StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>> startsWith(
+StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>
+    startsWith(
   List<ConnectivityResult> data,
 ) {
   return StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>(
@@ -39,7 +42,8 @@ StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>> startsWith
       controller = StreamController<List<ConnectivityResult>>(
         sync: true,
         onListen: () => controller?.add(data),
-        onPause: ([Future<dynamic>? resumeSignal]) => subscription.pause(resumeSignal),
+        onPause: ([Future<dynamic>? resumeSignal]) =>
+            subscription.pause(resumeSignal),
         onResume: () => subscription.resume(),
         onCancel: () => subscription.cancel(),
       );

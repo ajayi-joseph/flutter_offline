@@ -13,18 +13,96 @@ const kDefaultRetryCooldown = Duration(seconds: 2);
 typedef ValueWidgetBuilder<T> = Widget Function(
     BuildContext context, T value, Widget child);
 
-/// Controller for managing retry callbacks
-class RetryController {
-  RetryController({
-    this.onRetry,
-    this.onRetryError,
+/// Controller for managing retry functionality and state
+class OfflineRetryController extends ChangeNotifier {
+  OfflineRetryController({
+    this.maxRetries = kDefaultMaxRetries,
+    this.retryCooldown = kDefaultRetryCooldown,
   });
 
-  /// Callback function that gets executed when retry is triggered
-  final Future<void> Function()? onRetry;
+  /// Maximum number of retry attempts with exponential backoff
+  final int maxRetries;
 
-  /// Callback function that gets executed when retry fails
-  final void Function(Object error, StackTrace stackTrace)? onRetryError;
+  /// Minimum duration between manual retry attempts to prevent spam
+  final Duration retryCooldown;
+
+  int _retryCount = 0;
+  DateTime? _lastRetryTime;
+  bool _isRetrying = false;
+
+  /// Get current retry count for UI display
+  int get retryCount => _retryCount;
+
+  /// Check if currently retrying for UI display
+  bool get isRetrying => _isRetrying;
+
+  /// Check if retry is currently available
+  /// Useful for UI to enable/disable retry button
+  bool get canRetry => _canRetryNow();
+
+  /// Manually retry connectivity check with exponential backoff
+  Future<void> retry() async {
+    if (!_canRetryNow()) {
+      return;
+    }
+
+    _isRetrying = true;
+    notifyListeners();
+
+    _lastRetryTime = clock.now();
+
+    try {
+      // Execute custom retry callback if provided
+      await onRetry();
+
+      // Calculate exponential backoff delay
+      final delaySeconds = (1 << _retryCount); // 2^retryCount
+      await Future.delayed(Duration(seconds: delaySeconds));
+
+      _retryCount++;
+    } catch (e, stackTrace) {
+      // Communicate error back to caller
+      onRetryError(e, stackTrace);
+    } finally {
+      _isRetrying = false;
+      notifyListeners();
+    }
+  }
+
+  /// Reset retry state when connection is restored
+  void reset() {
+    _retryCount = 0;
+    _lastRetryTime = null;
+    notifyListeners();
+  }
+
+  /// Internal helper to check if retry is available
+  bool _canRetryNow() {
+    if (_isRetrying) {
+      return false;
+    }
+    if (_retryCount >= maxRetries) {
+      return false;
+    }
+
+    final now = clock.now();
+    if (_lastRetryTime != null &&
+        now.difference(_lastRetryTime!) < retryCooldown) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Override this method to execute custom logic when retry is triggered
+  Future<void> onRetry() async {
+    // Empty default implementation - subclasses can override
+  }
+
+  /// Override this method to handle retry errors
+  void onRetryError(Object error, StackTrace stackTrace) {
+    // Empty default implementation - subclasses can override
+  }
 }
 
 class OfflineBuilder extends StatefulWidget {
@@ -35,9 +113,7 @@ class OfflineBuilder extends StatefulWidget {
     WidgetBuilder? builder,
     Widget? child,
     WidgetBuilder? errorBuilder,
-    int maxRetries = kDefaultMaxRetries,
-    Duration retryCooldown = kDefaultRetryCooldown,
-    RetryController? retryController,
+    OfflineRetryController? retryController,
   }) {
     return OfflineBuilder.initialize(
       key: key,
@@ -47,8 +123,6 @@ class OfflineBuilder extends StatefulWidget {
       debounceDuration: debounceDuration,
       builder: builder,
       errorBuilder: errorBuilder,
-      maxRetries: maxRetries,
-      retryCooldown: retryCooldown,
       retryController: retryController,
       child: child,
     );
@@ -64,8 +138,6 @@ class OfflineBuilder extends StatefulWidget {
     this.builder,
     this.child,
     this.errorBuilder,
-    this.maxRetries = kDefaultMaxRetries,
-    this.retryCooldown = kDefaultRetryCooldown,
     this.retryController,
   })  : assert(
             !(builder is WidgetBuilder && child is Widget) &&
@@ -93,14 +165,8 @@ class OfflineBuilder extends StatefulWidget {
   /// Used for building the error widget incase of any platform errors
   final WidgetBuilder? errorBuilder;
 
-  /// Maximum number of retry attempts with exponential backoff
-  final int maxRetries;
-
-  /// Minimum duration between manual retry attempts to prevent spam
-  final Duration retryCooldown;
-
   /// Controller for managing retry functionality and state
-  final RetryController? retryController;
+  final OfflineRetryController? retryController;
 
   @override
   OfflineBuilderState createState() => OfflineBuilderState();
@@ -108,10 +174,6 @@ class OfflineBuilder extends StatefulWidget {
 
 class OfflineBuilderState extends State<OfflineBuilder> {
   late Stream<List<ConnectivityResult>> _connectivityStream;
-
-  int _retryCount = 0;
-  DateTime? _lastRetryTime;
-  bool _isRetrying = false;
 
   @override
   void initState() {
@@ -140,82 +202,9 @@ class OfflineBuilderState extends State<OfflineBuilder> {
   /// Handle connectivity changes and reset retry state when reconnected
   void _handleConnectivityChange(List<ConnectivityResult> connectivity) {
     final isConnected = !connectivity.contains(ConnectivityResult.none);
-    if (isConnected && _retryCount > 0) {
-      if (mounted) {
-        setState(() {
-          _retryCount = 0;
-          _lastRetryTime = null;
-        });
-      }
+    if (isConnected && widget.retryController != null) {
+      widget.retryController!.reset();
     }
-  }
-
-  /// Manually retry connectivity check with exponential backoff
-  Future<void> retry() async {
-    if (!_canRetryNow()) {
-      return;
-    }
-
-    setState(() {
-      _isRetrying = true;
-    });
-
-    _lastRetryTime = clock.now();
-
-    try {
-      // Execute custom retry callback if provided
-      if (widget.retryController?.onRetry != null) {
-        await widget.retryController!.onRetry!();
-      }
-
-      // Calculate exponential backoff delay
-      final delaySeconds = (1 << _retryCount); // 2^retryCount
-      await Future.delayed(Duration(seconds: delaySeconds));
-
-      // Force a connectivity check - this will trigger the stream naturally
-      await widget.connectivityService.checkConnectivity();
-
-      _retryCount++;
-    } catch (e, stackTrace) {
-      // Communicate error back to caller via controller
-      if (widget.retryController?.onRetryError != null) {
-        widget.retryController!.onRetryError!(e, stackTrace);
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRetrying = false;
-        });
-      }
-    }
-  }
-
-  /// Get current retry count for UI display
-  int get retryCount => _retryCount;
-
-  /// Check if currently retrying for UI display
-  bool get isRetrying => _isRetrying;
-
-  /// Check if retry is currently available
-  /// Useful for UI to enable/disable retry button
-  bool get canRetry => _canRetryNow();
-
-  /// Internal helper to check if retry is available
-  bool _canRetryNow() {
-    if (_isRetrying) {
-      return false;
-    }
-    if (_retryCount >= widget.maxRetries) {
-      return false;
-    }
-
-    final now = clock.now();
-    if (_lastRetryTime != null &&
-        now.difference(_lastRetryTime!) < widget.retryCooldown) {
-      return false;
-    }
-
-    return true;
   }
 
   @override

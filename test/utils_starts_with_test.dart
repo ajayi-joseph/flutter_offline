@@ -5,7 +5,8 @@ import 'package:flutter_offline/src/utils.dart' as transformers;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  StreamController<List<ConnectivityResult>> stream() => StreamController<List<ConnectivityResult>>();
+  StreamController<List<ConnectivityResult>> stream() =>
+      StreamController<List<ConnectivityResult>>();
 
   late StreamController<List<ConnectivityResult>> values;
   late List<List<ConnectivityResult>> emittedValues;
@@ -32,8 +33,8 @@ void main() {
         valuesCanceled = true;
       };
     subscription = values.stream
-        .transform<List<ConnectivityResult>>(
-            transformer as StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>)
+        .transform<List<ConnectivityResult>>(transformer as StreamTransformer<
+            List<ConnectivityResult>, List<ConnectivityResult>>)
         .listen(emittedValues.add, onError: errors.add, onDone: () {
       // isDone = true;
     });
