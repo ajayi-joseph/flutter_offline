@@ -1,12 +1,14 @@
 ## [6.1.0]
 
 Added manual retry functionality with exponential backoff:
-- Simple callback-based retry functionality via `onBuilderReady`
-- Configurable retry limits and cooldown periods
-- Exponential backoff retry strategy (1s, 2s, 4s, 8s, 16s...)
-- Custom retry callbacks support (`onRetry`)
+- Introduced `OfflineRetryController` extending `ChangeNotifier` for retry state management
+- Configurable retry limits (default: 5) and cooldown periods (default: 2s)
+- Exponential backoff retry strategy (2^n seconds: 1, 2, 4, 8, 16...)
+- Template method pattern with overridable `onRetry()` and `onRetryError()` methods
 - Automatic retry counter reset when connection is restored
-- Enhanced demo with retry button example
+- Added `clock` package dependency for testable time operations
+- Enhanced demo with retry button and real-time status indicators
+- Comprehensive test coverage (32 tests, 100% coverage)
 
 ## [6.0.0]
 
