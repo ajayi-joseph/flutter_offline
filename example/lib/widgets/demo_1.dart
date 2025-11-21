@@ -11,7 +11,6 @@ class Demo1 extends StatefulWidget {
 
 class _Demo1State extends State<Demo1> {
   late final OfflineRetryController _retryController;
-  bool _isConnected = true; // Track connection state
   Timer? _cooldownTimer;
 
   @override
@@ -64,25 +63,87 @@ class _Demo1State extends State<Demo1> {
       ) {
         final connected = !connectivity.contains(ConnectivityResult.none);
 
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_isConnected != connected) {
-            setState(() {
-              _isConnected = connected;
-            });
-          }
-        });
-
         return Stack(
           fit: StackFit.expand,
           children: [
-            child,
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                const Text(
+                  'Enhanced Demo with Retry Functionality',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Turn off your internet to see the offline state.',
+                ),
+                const SizedBox(height: 24),
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: !connected && _retryController.canRetry
+                          ? () async {
+                              await _retryController.retry();
+                              _startCooldownTimer(); // Start timer to refresh UI
+                            }
+                          : null,
+                      icon: _retryController.isRetrying
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
+                      label: Text(_retryController.isRetrying
+                          ? 'Retrying...'
+                          : 'Retry Connection'),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Retry attempts: ${_retryController.retryCount}/5',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    if (!connected) ...[
+                      if (_retryController.isRetrying)
+                        Text(
+                          'Retrying with ${1 << _retryController.retryCount}s exponential backoff...',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.blue),
+                        )
+                      else if (_retryController.retryCount == 5)
+                        const Text(
+                          'Max retries reached (5/5)',
+                          style: TextStyle(fontSize: 12, color: Colors.red),
+                        )
+                      else if (!_retryController.canRetry &&
+                          _retryController.retryCount > 0 &&
+                          !_retryController.isRetrying)
+                        const Text(
+                          'Cooldown active - wait 2s before next retry',
+                          style: TextStyle(fontSize: 12, color: Colors.orange),
+                        )
+                      else
+                        const Text(
+                          'Ready to retry',
+                          style: TextStyle(fontSize: 12, color: Colors.green),
+                        ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
             Positioned(
               height: 32.0,
               left: 0.0,
               right: 0.0,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 350),
-                color: connected ? const Color(0xFF00EE44) : const Color(0xFFEE4400),
+                color: connected
+                    ? const Color(0xFF00EE44)
+                    : const Color(0xFFEE4400),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
                   child: connected
@@ -101,7 +162,8 @@ class _Demo1State extends State<Demo1> {
                                 height: 12.0,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.0,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               ),
                             ],
@@ -113,72 +175,6 @@ class _Demo1State extends State<Demo1> {
           ],
         );
       },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          const Text(
-            'Enhanced Demo with Retry Functionality',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Turn off your internet to see the offline state.',
-          ),
-          const SizedBox(height: 24),
-          Column(
-            children: [
-              ElevatedButton.icon(
-                onPressed: !_isConnected && _retryController.canRetry
-                    ? () async {
-                        setState(() {}); // Force UI refresh before retry
-                        await _retryController.retry();
-                        _startCooldownTimer(); // Start timer to refresh UI
-                        setState(() {}); // Refresh UI after retry
-                      }
-                    : null,
-                icon: _retryController.isRetrying
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-                label: Text(_retryController.isRetrying ? 'Retrying...' : 'Retry Connection'),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Retry attempts: ${_retryController.retryCount}/5',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 4),
-              if (!_isConnected) ...[
-                if (_retryController.isRetrying)
-                  Text(
-                    'Retrying with ${1 << _retryController.retryCount}s exponential backoff...',
-                    style: const TextStyle(fontSize: 12, color: Colors.blue),
-                  )
-                else if (_retryController.retryCount == 5)
-                  const Text(
-                    'Max retries reached (5/5)',
-                    style: TextStyle(fontSize: 12, color: Colors.red),
-                  )
-                else if (!_retryController.canRetry && _retryController.retryCount > 0 && !_retryController.isRetrying)
-                  const Text(
-                    'Cooldown active - wait 2s before next retry',
-                    style: TextStyle(fontSize: 12, color: Colors.orange),
-                  )
-                else
-                  const Text(
-                    'Ready to retry',
-                    style: TextStyle(fontSize: 12, color: Colors.green),
-                  ),
-              ],
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
