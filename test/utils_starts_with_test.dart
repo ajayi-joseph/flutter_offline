@@ -32,7 +32,8 @@ void main() {
         valuesCanceled = true;
       };
     subscription = values.stream
-        .transform<List<ConnectivityResult>>(transformer as StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>)
+        .transform<List<ConnectivityResult>>(
+            transformer as StreamTransformer<List<ConnectivityResult>, List<ConnectivityResult>>)
         .listen(emittedValues.add, onError: errors.add, onDone: () {
       // isDone = true;
     });
@@ -63,7 +64,9 @@ void main() {
 
     test('outputs initial value', () async {
       await Future(() {});
-      expect(emittedValues, [[ConnectivityResult.none]]);
+      expect(emittedValues, [
+        [ConnectivityResult.none]
+      ]);
     });
 
     test('outputs all values', () async {
@@ -71,12 +74,18 @@ void main() {
         ..add([ConnectivityResult.mobile])
         ..add([ConnectivityResult.wifi]);
       await Future(() {});
-      expect(emittedValues, [[ConnectivityResult.none], [ConnectivityResult.mobile], [ConnectivityResult.wifi]]);
+      expect(emittedValues, [
+        [ConnectivityResult.none],
+        [ConnectivityResult.mobile],
+        [ConnectivityResult.wifi]
+      ]);
     });
 
     test('outputs initial when followed by empty stream', () async {
       await values.close();
-      expect(emittedValues, [[ConnectivityResult.none]]);
+      expect(emittedValues, [
+        [ConnectivityResult.none]
+      ]);
     });
 
     // test('closes with values', () async {

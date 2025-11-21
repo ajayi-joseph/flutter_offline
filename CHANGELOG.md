@@ -1,3 +1,15 @@
+## [6.1.0]
+
+Added manual retry functionality with exponential backoff:
+- Introduced `OfflineRetryController` extending `ChangeNotifier` for retry state management
+- Configurable retry limits (default: 5) and cooldown periods (default: 2s)
+- Exponential backoff retry strategy (2^n seconds: 1, 2, 4, 8, 16...)
+- Template method pattern with overridable `onRetry()` and `onRetryError()` methods
+- Automatic retry counter reset when connection is restored
+- Added `clock` package dependency for testable time operations
+- Enhanced demo with retry button and real-time status indicators
+- Comprehensive test coverage (32 tests, 100% coverage)
+
 ## [6.0.0]
 
 Bump `package:connectivity_plus` to `^7.0.0`

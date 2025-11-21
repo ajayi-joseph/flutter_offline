@@ -6,6 +6,33 @@ import 'package:flutter_offline/flutter_offline.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:network_info_plus/network_info_plus.dart' as wifi;
 
+/// Test helper class that extends OfflineRetryController to override callbacks
+class _TestRetryController extends OfflineRetryController {
+  _TestRetryController({
+    super.maxRetries,
+    super.retryCooldown,
+    this.onRetryCallback,
+    this.onRetryErrorCallback,
+  });
+
+  final Future<void> Function()? onRetryCallback;
+  final void Function(Object error, StackTrace stackTrace)? onRetryErrorCallback;
+
+  @override
+  Future<void> onRetry() async {
+    if (onRetryCallback != null) {
+      await onRetryCallback!();
+    }
+  }
+
+  @override
+  void onRetryError(Object error, StackTrace stackTrace) {
+    if (onRetryErrorCallback != null) {
+      onRetryErrorCallback!(error, stackTrace);
+    }
+  }
+}
+
 void main() {
   group('Test UI Widget', () {
     testWidgets('Test w/ factory OfflineBuilder', (WidgetTester tester) async {
@@ -260,6 +287,294 @@ void main() {
       expect(find.text('Error'), findsOneWidget);
     });
   });
+
+  group('Test Retry Functionality', () {
+    testWidgets('Test retry parameters acceptance', (WidgetTester tester) async {
+      final controller = OfflineRetryController(
+        maxRetries: 3,
+        retryCooldown: const Duration(seconds: 1),
+      );
+
+      expect(controller.maxRetries, equals(3));
+      expect(controller.retryCooldown, equals(const Duration(seconds: 1)));
+    });
+
+    testWidgets('Test retry functionality with GlobalKey', (WidgetTester tester) async {
+      final offlineKey = GlobalKey<OfflineBuilderState>();
+      final retryController = OfflineRetryController(
+        maxRetries: 2,
+        retryCooldown: const Duration(milliseconds: 100),
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        home: OfflineBuilder.initialize(
+          key: offlineKey,
+          connectivityService: TestConnectivityService([ConnectivityResult.none]),
+          wifiInfo: TestNetworkInfoService(),
+          retryController: retryController,
+          connectivityBuilder: (_, __, Widget child) => child,
+          child: const Text('test'),
+        ),
+      ));
+
+      await tester.pump(kOfflineDebounceDuration);
+
+      // Builder state should be available
+      expect(offlineKey.currentState, isNotNull);
+      expect(retryController.canRetry, true);
+      expect(retryController.isRetrying, false);
+      expect(retryController.retryCount, 0);
+    });
+
+    testWidgets('Test retry with RetryController callback', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final offlineKey = GlobalKey<OfflineBuilderState>();
+        var onRetryCallCount = 0;
+        final retryController = _TestRetryController(
+          maxRetries: 2,
+          retryCooldown: Duration.zero,
+          onRetryCallback: () async {
+            onRetryCallCount++;
+          },
+        );
+
+        await tester.pumpWidget(MaterialApp(
+          home: OfflineBuilder.initialize(
+            key: offlineKey,
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
+            wifiInfo: TestNetworkInfoService(),
+            retryController: retryController,
+            connectivityBuilder: (_, __, Widget child) => child,
+            child: const Text('test'),
+          ),
+        ));
+
+        await tester.pump(kOfflineDebounceDuration);
+
+        expect(retryController.canRetry, true);
+
+        // Trigger retry and wait for it to complete
+        await retryController.retry();
+
+        expect(onRetryCallCount, 1);
+        expect(retryController.retryCount, 1);
+      });
+    });
+
+    testWidgets('Test max retry limits', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final offlineKey = GlobalKey<OfflineBuilderState>();
+        final retryController = OfflineRetryController(
+          maxRetries: 2,
+          retryCooldown: Duration.zero,
+        );
+
+        await tester.pumpWidget(MaterialApp(
+          home: OfflineBuilder.initialize(
+            key: offlineKey,
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
+            wifiInfo: TestNetworkInfoService(),
+            retryController: retryController,
+            connectivityBuilder: (_, __, Widget child) => child,
+            child: const Text('test'),
+          ),
+        ));
+
+        await tester.pump(kOfflineDebounceDuration);
+
+        // Initially should be able to retry
+        expect(retryController.canRetry, true);
+        expect(retryController.retryCount, 0);
+
+        // First retry - await completion
+        await retryController.retry();
+        expect(retryController.retryCount, 1);
+
+        // Should be able to retry again (no cooldown)
+        expect(retryController.canRetry, true);
+
+        // Second retry - await completion
+        await retryController.retry();
+        expect(retryController.retryCount, 2);
+
+        // Should NOT be able to retry anymore (maxRetries = 2)
+        expect(retryController.canRetry, false);
+      });
+    });
+
+    testWidgets('Test retry counter after multiple retries', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final offlineKey = GlobalKey<OfflineBuilderState>();
+        final retryController = OfflineRetryController(
+          maxRetries: 3,
+          retryCooldown: Duration.zero,
+        );
+
+        await tester.pumpWidget(MaterialApp(
+          home: OfflineBuilder.initialize(
+            key: offlineKey,
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
+            wifiInfo: TestNetworkInfoService(),
+            retryController: retryController,
+            connectivityBuilder: (_, __, Widget child) => child,
+            child: const Text('test'),
+          ),
+        ));
+
+        await tester.pumpAndSettle();
+
+        // Perform first retry
+        await retryController.retry();
+        expect(retryController.retryCount, 1);
+
+        // Perform second retry (no cooldown needed)
+        await retryController.retry();
+        expect(retryController.retryCount, 2);
+
+        // Perform third retry (no cooldown needed)
+        await retryController.retry();
+        expect(retryController.retryCount, 3);
+
+        // Should not be able to retry anymore
+        expect(retryController.canRetry, false);
+      });
+    });
+
+    testWidgets('Test retry with onRetryError callback', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final offlineKey = GlobalKey<OfflineBuilderState>();
+        Object? capturedError;
+        StackTrace? capturedStackTrace;
+
+        final retryController = _TestRetryController(
+          maxRetries: 2,
+          retryCooldown: Duration.zero,
+          onRetryCallback: () async {
+            // Simulate an error during retry
+            throw Exception('Simulated retry error');
+          },
+          onRetryErrorCallback: (error, stackTrace) {
+            capturedError = error;
+            capturedStackTrace = stackTrace;
+          },
+        );
+
+        await tester.pumpWidget(MaterialApp(
+          home: OfflineBuilder.initialize(
+            key: offlineKey,
+            connectivityService: TestConnectivityService([ConnectivityResult.none]),
+            wifiInfo: TestNetworkInfoService(),
+            retryController: retryController,
+            connectivityBuilder: (_, __, Widget child) => child,
+            child: const Text('test'),
+          ),
+        ));
+
+        await tester.pump(kOfflineDebounceDuration);
+
+        // Trigger retry - this should trigger the onRetry callback which throws
+        await retryController.retry();
+
+        // Verify that the error was captured
+        expect(capturedError, isNotNull);
+        expect(capturedError.toString(), contains('Simulated retry error'));
+        expect(capturedStackTrace, isNotNull);
+      });
+    });
+
+    testWidgets('Test default retry parameters', (WidgetTester tester) async {
+      final controller = OfflineRetryController();
+
+      expect(controller.maxRetries, equals(kDefaultMaxRetries));
+      expect(controller.retryCooldown, equals(kDefaultRetryCooldown));
+    });
+
+    testWidgets('Test retry reset on reconnection', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final service = TestConnectivityService([ConnectivityResult.none]);
+        final retryController = OfflineRetryController(
+          maxRetries: 5,
+          retryCooldown: Duration.zero,
+        );
+
+        // Listen to controller to trigger state updates
+        var resetCalled = false;
+        retryController.addListener(() {
+          if (retryController.retryCount == 0) {
+            resetCalled = true;
+          }
+        });
+
+        await tester.pumpWidget(MaterialApp(
+          home: OfflineBuilder.initialize(
+            connectivityService: service,
+            wifiInfo: TestNetworkInfoService(),
+            debounceDuration: Duration.zero,
+            retryController: retryController,
+            connectivityBuilder: (_, connectivity, Widget child) {
+              // Test the reset logic is triggered
+              return Text(connectivity.toString());
+            },
+            child: const Text('test'),
+          ),
+        ));
+
+        await tester.pump();
+
+        // Perform a retry
+        await retryController.retry();
+        expect(retryController.retryCount, 1);
+
+        // Simulate reconnection
+        service.result = [ConnectivityResult.wifi];
+        await tester.pump();
+        await Future.delayed(Duration.zero); // Let the stream process
+
+        // Verify retry state was reset
+        expect(retryController.retryCount, 0);
+        expect(resetCalled, true);
+      });
+    });
+
+    testWidgets('Test manual reset', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final retryController = OfflineRetryController(
+          maxRetries: 5,
+          retryCooldown: Duration.zero,
+        );
+
+        // Perform retries
+        await retryController.retry();
+        await retryController.retry();
+        expect(retryController.retryCount, 2);
+
+        // Manual reset
+        retryController.reset();
+
+        // Verify state was reset
+        expect(retryController.retryCount, 0);
+        expect(retryController.canRetry, true);
+      });
+    });
+
+    testWidgets('Test base controller empty callbacks', (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        final controller = OfflineRetryController(
+          maxRetries: 1,
+          retryCooldown: Duration.zero,
+        );
+
+        // Call base onRetry (should do nothing)
+        await controller.onRetry();
+
+        // Call base onRetryError (should do nothing - this covers line 101)
+        controller.onRetryError(Exception('test'), StackTrace.current);
+
+        // Verify no issues calling empty base implementations
+        expect(controller.retryCount, 0);
+      });
+    });
+  });
 }
 
 class TestConnectivityService implements Connectivity {
@@ -313,4 +628,27 @@ class TestNetworkInfoService implements wifi.NetworkInfo {
 
   @override
   Future<String?> getWifiSubmask() async => '255.255.255.0';
+}
+
+class ErrorThrowingConnectivityService implements Connectivity {
+  ErrorThrowingConnectivityService() {
+    controller = StreamController<List<ConnectivityResult>>.broadcast(
+      onListen: () => controller.add([ConnectivityResult.none]),
+    );
+  }
+  late final StreamController<List<ConnectivityResult>> controller;
+  int checkCount = 0;
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => controller.stream;
+
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async {
+    checkCount++;
+    // Only throw on subsequent checks (during retry), not the first one
+    if (checkCount > 1) {
+      throw Exception('Simulated connectivity error');
+    }
+    return [ConnectivityResult.none];
+  }
 }
