@@ -8,7 +8,7 @@ A tidy utility to handle offline/online connectivity like a Boss. It provides su
 
 ```yaml
 dependencies:
-  flutter_offline: "^4.0.0"
+  flutter_offline: "^6.0.0"
 ```
 
 ### ⚡️ Import
@@ -83,6 +83,90 @@ class DemoPage extends StatelessWidget {
 ```
 
 For more info, please, refer to the `main.dart` in the example.
+
+## 🔄 Retry Functionality
+
+Manually retry connectivity checks with exponential backoff:
+
+```dart
+class MyWidget extends StatefulWidget {
+  @override
+  State<MyWidget> createState() => _MyWidgetState();
+}
+
+class _MyWidgetState extends State<MyWidget> {
+  late final OfflineRetryController _retryController;
+
+  @override
+  void initState() {
+    super.initState();
+    _retryController = OfflineRetryController(
+      maxRetries: 5,
+      retryCooldown: const Duration(seconds: 2),
+    );
+    _retryController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _retryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OfflineBuilder(
+      retryController: _retryController,
+      connectivityBuilder: (context, connectivity, child) {
+        final connected = !connectivity.contains(ConnectivityResult.none);
+        return Column(
+          children: [
+            Text(connected ? 'ONLINE' : 'OFFLINE'),
+            if (!connected)
+              ElevatedButton(
+                onPressed: _retryController.canRetry ? _retryController.retry : null,
+                child: Text('Retry (${_retryController.retryCount}/5)'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+```
+
+### Custom Retry Logic
+
+Override `onRetry()` or `onRetryError()` for custom behavior:
+
+```dart
+class CustomRetryController extends OfflineRetryController {
+  CustomRetryController() : super(maxRetries: 3);
+
+  @override
+  Future<void> onRetry() async {
+    print('Retrying connection...');
+  }
+
+  @override
+  void onRetryError(Object error, StackTrace stackTrace) {
+    print('Retry failed: $error');
+  }
+}
+```
+
+**Features:**
+- Exponential backoff (1s, 2s, 4s, 8s, 16s)
+- Configurable retry limits and cooldown
+- Auto-reset on reconnection
+- Extends `ChangeNotifier` for reactive UI updates
+
+## 🧪 Testing
+
+Run tests with:
+```bash
+flutter test
+```
 
 ## 📷 Screenshots
 
